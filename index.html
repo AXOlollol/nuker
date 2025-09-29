@@ -181,11 +181,6 @@
             color: #b9bbbe;
         }
         
-        .server-members {
-            font-size: 12px;
-            color: #b9bbbe;
-        }
-        
         .admin-badge {
             background-color: var(--success);
             color: var(--dark);
@@ -274,6 +269,12 @@
                 grid-template-columns: 1fr;
             }
         }
+
+        .token-info {
+            font-size: 12px;
+            color: #b9bbbe;
+            margin-top: 5px;
+        }
     </style>
 </head>
 <body>
@@ -287,10 +288,11 @@
             <div class="form-group">
                 <label for="botToken">Discord Bot Token</label>
                 <input type="text" id="botToken" placeholder="Enter your bot token here">
+                <div class="token-info">Make sure your bot token starts with characters like "MTE..." or "OT..."</div>
             </div>
             <button id="fetchServers">Fetch Servers</button>
             <div class="alert alert-warning">
-                <strong>Warning:</strong> Your bot token is sensitive information. Make sure you trust this website before entering it.
+                <strong>Warning:</strong> Your bot token is sensitive information. This tool runs locally on your computer.
             </div>
         </div>
         
@@ -312,7 +314,7 @@
                 <div class="tool-options">
                     <div class="form-group">
                         <label for="messageCount">Number of Messages</label>
-                        <input type="number" id="messageCount" value="5" min="1" max="100">
+                        <input type="number" id="messageCount" value="5" min="1" max="50">
                     </div>
                     
                     <div class="form-group">
@@ -330,7 +332,6 @@
                 </div>
                 
                 <button id="runTool" class="btn-success">Run Tool</button>
-                <button id="stopTool" class="btn-danger hidden">Stop Tool</button>
                 
                 <div class="console-output" id="consoleOutput">
                     <div class="loading" id="consoleLoading">
@@ -354,7 +355,6 @@
         const mentionEveryoneSelect = document.getElementById('mentionEveryone');
         const messageContentInput = document.getElementById('messageContent');
         const runToolBtn = document.getElementById('runTool');
-        const stopToolBtn = document.getElementById('stopTool');
         const consoleOutput = document.getElementById('consoleOutput');
         const consoleLoading = document.getElementById('consoleLoading');
         
@@ -362,12 +362,10 @@
         let currentBotToken = '';
         let selectedGuildId = '';
         let selectedGuildName = '';
-        let isToolRunning = false;
         
         // Event Listeners
         fetchServersBtn.addEventListener('click', fetchServers);
         runToolBtn.addEventListener('click', runTool);
-        stopToolBtn.addEventListener('click', stopTool);
         
         // Fetch servers where the bot is a member
         async function fetchServers() {
@@ -384,6 +382,7 @@
             fetchServersBtn.disabled = true;
             fetchServersBtn.textContent = 'Fetching...';
             consoleLoading.classList.remove('hidden');
+            logToConsole('Fetching servers from Discord API...');
             
             try {
                 const response = await fetch('/api/servers', {
@@ -404,16 +403,23 @@
                     serverSection.classList.remove('hidden');
                     
                     // Log success
-                    logToConsole(`Successfully fetched ${data.servers.length} servers where the bot is a member.`);
+                    logToConsole(`✅ Successfully fetched ${data.servers.length} servers`, '#57F287');
+                    
+                    // Show admin server count
+                    const adminServers = data.servers.filter(s => s.hasAdmin).length;
+                    logToConsole(`📊 ${adminServers} servers with admin permissions`, '#57F287');
                     
                 } else {
                     throw new Error(data.error || 'Failed to fetch servers');
                 }
                 
             } catch (error) {
-                alert('Failed to fetch servers. Please check your token and try again.');
-                console.error(error);
-                logToConsole(`Error: ${error.message}`, '#ED4245');
+                console.error('Error:', error);
+                logToConsole(`❌ Error: ${error.message}`, '#ED4245');
+                logToConsole('💡 Make sure:', '#FEE75C');
+                logToConsole('   • Your bot token is correct', '#FEE75C');
+                logToConsole('   • Your bot is properly set up in Discord Developer Portal', '#FEE75C');
+                logToConsole('   • You are using a valid bot token (starts with MTE, OT, etc.)', '#FEE75C');
             } finally {
                 // Reset button state
                 fetchServersBtn.disabled = false;
@@ -442,6 +448,10 @@
                     const iconImg = document.createElement('img');
                     iconImg.src = guild.icon;
                     iconImg.alt = guild.name;
+                    iconImg.onerror = function() {
+                        this.style.display = 'none';
+                        serverIcon.textContent = guild.name.charAt(0).toUpperCase();
+                    };
                     serverIcon.appendChild(iconImg);
                 } else {
                     serverIcon.textContent = guild.name.charAt(0).toUpperCase();
@@ -459,13 +469,8 @@
                 serverId.className = 'server-id';
                 serverId.textContent = `ID: ${guild.id}`;
                 
-                const serverMembers = document.createElement('div');
-                serverMembers.className = 'server-members';
-                serverMembers.textContent = `${guild.member_count} members`;
-                
                 serverInfo.appendChild(serverName);
                 serverInfo.appendChild(serverId);
-                serverInfo.appendChild(serverMembers);
                 
                 // Add admin badge if applicable
                 if (guild.hasAdmin) {
@@ -476,6 +481,12 @@
                     
                     // Make clickable if admin
                     serverCard.addEventListener('click', () => selectServer(guild));
+                } else {
+                    const noPermBadge = document.createElement('span');
+                    noPermBadge.className = 'admin-badge';
+                    noPermBadge.textContent = 'NO ADMIN';
+                    noPermBadge.style.backgroundColor = '#ED4245';
+                    serverName.appendChild(noPermBadge);
                 }
                 
                 serverCard.appendChild(serverIcon);
@@ -498,7 +509,7 @@
             toolSection.scrollIntoView({ behavior: 'smooth' });
             
             // Log selection
-            logToConsole(`Selected server: ${guild.name} (ID: ${guild.id})`);
+            logToConsole(`🎯 Selected server: ${guild.name} (ID: ${guild.id})`, '#5865F2');
         }
         
         // Run the tool on the selected server
@@ -517,22 +528,20 @@
                 return;
             }
             
-            if (isNaN(messageCount) || messageCount < 1) {
-                alert('Please enter a valid message count');
+            if (isNaN(messageCount) || messageCount < 1 || messageCount > 50) {
+                alert('Please enter a valid message count (1-50)');
                 return;
             }
             
             // Update UI state
-            isToolRunning = true;
             runToolBtn.disabled = true;
-            stopToolBtn.classList.remove('hidden');
-            consoleLoading.classList.add('hidden');
+            runToolBtn.textContent = 'Running...';
             
             // Log start
-            logToConsole(`Starting confession tool on server: ${selectedGuildName}`);
-            logToConsole(`Message: "${messageContent}"`);
-            logToConsole(`Message count: ${messageCount}`);
-            logToConsole(`Mention @everyone: ${mentionEveryone ? 'Yes' : 'No'}`);
+            logToConsole('🚀 Starting confession tool...', '#5865F2');
+            logToConsole(`📝 Message: "${messageContent}"`);
+            logToConsole(`🔢 Message count: ${messageCount}`);
+            logToConsole(`📢 Mention @everyone: ${mentionEveryone ? 'Yes' : 'No'}`);
             logToConsole('--- Starting message burst ---');
             
             try {
@@ -553,34 +562,22 @@
                 const data = await response.json();
                 
                 if (response.ok) {
-                    logToConsole('Tool started successfully!', '#57F287');
-                    logToConsole('Messages are being sent in the background...', '#57F287');
+                    logToConsole('✅ Tool started successfully!', '#57F287');
+                    logToConsole('⏳ Messages are being sent in the background...', '#57F287');
+                    logToConsole('📡 Check your Discord server to see the messages', '#57F287');
                 } else {
                     throw new Error(data.error || 'Failed to start tool');
                 }
                 
             } catch (error) {
-                logToConsole(`Error: ${error.message}`, '#ED4245');
+                logToConsole(`❌ Error: ${error.message}`, '#ED4245');
             } finally {
                 // Re-enable run button after a delay
                 setTimeout(() => {
                     runToolBtn.disabled = false;
-                    stopToolBtn.classList.add('hidden');
-                    isToolRunning = false;
-                }, 5000);
+                    runToolBtn.textContent = 'Run Tool';
+                }, 3000);
             }
-        }
-        
-        // Stop the tool execution
-        function stopTool() {
-            isToolRunning = false;
-            
-            // Update UI state
-            runToolBtn.disabled = false;
-            stopToolBtn.classList.add('hidden');
-            
-            // Log stop
-            logToConsole('--- Tool execution stopped by user ---');
         }
         
         // Log messages to the console output
@@ -602,8 +599,8 @@
         // Initialize the page
         function init() {
             // Add some initial console output
-            logToConsole('Discord Bot Server Manager initialized');
-            logToConsole('Enter your bot token and click "Fetch Servers" to begin');
+            logToConsole('🔧 Discord Bot Server Manager initialized', '#5865F2');
+            logToConsole('📝 Enter your bot token and click "Fetch Servers" to begin');
         }
         
         // Start the application
