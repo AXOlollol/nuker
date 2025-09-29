@@ -1,0 +1,613 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Discord Bot Server Manager</title>
+    <style>
+        :root {
+            --primary: #5865F2;
+            --primary-dark: #4752C4;
+            --secondary: #2C2F33;
+            --dark: #23272A;
+            --light: #FFFFFF;
+            --success: #57F287;
+            --danger: #ED4245;
+            --warning: #FEE75C;
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        
+        body {
+            background-color: var(--dark);
+            color: var(--light);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        
+        header {
+            text-align: center;
+            margin-bottom: 30px;
+            padding: 20px;
+            background-color: var(--secondary);
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+        
+        h1 {
+            color: var(--primary);
+            margin-bottom: 10px;
+        }
+        
+        .card {
+            background-color: var(--secondary);
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+        
+        .form-group {
+            margin-bottom: 15px;
+        }
+        
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        
+        input[type="text"], input[type="number"], select {
+            width: 100%;
+            padding: 10px;
+            border-radius: 5px;
+            border: 1px solid #40444B;
+            background-color: var(--dark);
+            color: var(--light);
+            font-size: 16px;
+        }
+        
+        button {
+            background-color: var(--primary);
+            color: var(--light);
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: bold;
+            transition: background-color 0.2s;
+        }
+        
+        button:hover {
+            background-color: var(--primary-dark);
+        }
+        
+        button:disabled {
+            background-color: #6c757d;
+            cursor: not-allowed;
+        }
+        
+        .btn-danger {
+            background-color: var(--danger);
+        }
+        
+        .btn-danger:hover {
+            background-color: #c03537;
+        }
+        
+        .btn-success {
+            background-color: var(--success);
+        }
+        
+        .btn-success:hover {
+            background-color: #46c874;
+        }
+        
+        .server-list {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 15px;
+            margin-top: 20px;
+        }
+        
+        .server-card {
+            background-color: var(--dark);
+            border-radius: 8px;
+            padding: 15px;
+            display: flex;
+            align-items: center;
+            transition: transform 0.2s;
+            cursor: pointer;
+        }
+        
+        .server-card:hover {
+            transform: translateY(-3px);
+        }
+        
+        .server-card.admin {
+            border-left: 4px solid var(--success);
+        }
+        
+        .server-card.non-admin {
+            border-left: 4px solid #6c757d;
+            cursor: not-allowed;
+            opacity: 0.6;
+        }
+        
+        .server-icon {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            margin-right: 15px;
+            background-color: var(--primary);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            font-size: 20px;
+            overflow: hidden;
+        }
+        
+        .server-icon img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+        
+        .server-info {
+            flex-grow: 1;
+        }
+        
+        .server-name {
+            font-weight: bold;
+            margin-bottom: 5px;
+            display: flex;
+            align-items: center;
+        }
+        
+        .server-id {
+            font-size: 12px;
+            color: #b9bbbe;
+        }
+        
+        .server-members {
+            font-size: 12px;
+            color: #b9bbbe;
+        }
+        
+        .admin-badge {
+            background-color: var(--success);
+            color: var(--dark);
+            padding: 3px 8px;
+            border-radius: 10px;
+            font-size: 12px;
+            font-weight: bold;
+            margin-left: 10px;
+        }
+        
+        .console-output {
+            background-color: #1e1e1e;
+            color: #d4d4d4;
+            padding: 15px;
+            border-radius: 5px;
+            height: 300px;
+            overflow-y: auto;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+            white-space: pre-wrap;
+            margin-top: 20px;
+        }
+        
+        .hidden {
+            display: none;
+        }
+        
+        .loading {
+            text-align: center;
+            padding: 20px;
+        }
+        
+        .spinner {
+            border: 4px solid rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            border-top: 4px solid var(--primary);
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 15px;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .alert {
+            padding: 10px 15px;
+            border-radius: 5px;
+            margin-bottom: 15px;
+        }
+        
+        .alert-warning {
+            background-color: rgba(254, 231, 92, 0.2);
+            border-left: 4px solid var(--warning);
+        }
+        
+        .alert-danger {
+            background-color: rgba(237, 66, 69, 0.2);
+            border-left: 4px solid var(--danger);
+        }
+        
+        .alert-success {
+            background-color: rgba(87, 242, 135, 0.2);
+            border-left: 4px solid var(--success);
+        }
+        
+        .tool-section {
+            margin-top: 20px;
+        }
+        
+        .tool-options {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            margin-bottom: 15px;
+        }
+        
+        @media (max-width: 768px) {
+            .tool-options {
+                grid-template-columns: 1fr;
+            }
+            
+            .server-list {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Discord Bot Server Manager</h1>
+            <p>Enter your bot token to manage servers and run commands</p>
+        </header>
+        
+        <div class="card">
+            <div class="form-group">
+                <label for="botToken">Discord Bot Token</label>
+                <input type="text" id="botToken" placeholder="Enter your bot token here">
+            </div>
+            <button id="fetchServers">Fetch Servers</button>
+            <div class="alert alert-warning">
+                <strong>Warning:</strong> Your bot token is sensitive information. Make sure you trust this website before entering it.
+            </div>
+        </div>
+        
+        <div id="serverSection" class="hidden">
+            <div class="card">
+                <h2>Bot Servers</h2>
+                <p>Servers with administrator permissions are clickable and can run the tool.</p>
+                <div id="serverList" class="server-list">
+                    <!-- Server cards will be populated here -->
+                </div>
+            </div>
+        </div>
+        
+        <div id="toolSection" class="tool-section hidden">
+            <div class="card">
+                <h2>Confession Tool</h2>
+                <p>Running on server: <span id="selectedServerName"></span></p>
+                
+                <div class="tool-options">
+                    <div class="form-group">
+                        <label for="messageCount">Number of Messages</label>
+                        <input type="number" id="messageCount" value="5" min="1" max="100">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="mentionEveryone">Mention @everyone</label>
+                        <select id="mentionEveryone">
+                            <option value="false">No</option>
+                            <option value="true">Yes</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label for="messageContent">Message Content</label>
+                    <input type="text" id="messageContent" placeholder="Enter your message here" value="This is a test message from the confession tool!">
+                </div>
+                
+                <button id="runTool" class="btn-success">Run Tool</button>
+                <button id="stopTool" class="btn-danger hidden">Stop Tool</button>
+                
+                <div class="console-output" id="consoleOutput">
+                    <div class="loading" id="consoleLoading">
+                        <div class="spinner"></div>
+                        <p>Waiting for action...</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // DOM Elements
+        const botTokenInput = document.getElementById('botToken');
+        const fetchServersBtn = document.getElementById('fetchServers');
+        const serverSection = document.getElementById('serverSection');
+        const serverList = document.getElementById('serverList');
+        const toolSection = document.getElementById('toolSection');
+        const selectedServerName = document.getElementById('selectedServerName');
+        const messageCountInput = document.getElementById('messageCount');
+        const mentionEveryoneSelect = document.getElementById('mentionEveryone');
+        const messageContentInput = document.getElementById('messageContent');
+        const runToolBtn = document.getElementById('runTool');
+        const stopToolBtn = document.getElementById('stopTool');
+        const consoleOutput = document.getElementById('consoleOutput');
+        const consoleLoading = document.getElementById('consoleLoading');
+        
+        // State variables
+        let currentBotToken = '';
+        let selectedGuildId = '';
+        let selectedGuildName = '';
+        let isToolRunning = false;
+        
+        // Event Listeners
+        fetchServersBtn.addEventListener('click', fetchServers);
+        runToolBtn.addEventListener('click', runTool);
+        stopToolBtn.addEventListener('click', stopTool);
+        
+        // Fetch servers where the bot is a member
+        async function fetchServers() {
+            const token = botTokenInput.value.trim();
+            
+            if (!token) {
+                alert('Please enter a bot token');
+                return;
+            }
+            
+            currentBotToken = token;
+            
+            // Show loading state
+            fetchServersBtn.disabled = true;
+            fetchServersBtn.textContent = 'Fetching...';
+            consoleLoading.classList.remove('hidden');
+            
+            try {
+                const response = await fetch('/api/servers', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ token: token })
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    // Display servers
+                    displayServers(data.servers);
+                    
+                    // Show server section
+                    serverSection.classList.remove('hidden');
+                    
+                    // Log success
+                    logToConsole(`Successfully fetched ${data.servers.length} servers where the bot is a member.`);
+                    
+                } else {
+                    throw new Error(data.error || 'Failed to fetch servers');
+                }
+                
+            } catch (error) {
+                alert('Failed to fetch servers. Please check your token and try again.');
+                console.error(error);
+                logToConsole(`Error: ${error.message}`, '#ED4245');
+            } finally {
+                // Reset button state
+                fetchServersBtn.disabled = false;
+                fetchServersBtn.textContent = 'Fetch Servers';
+                consoleLoading.classList.add('hidden');
+            }
+        }
+        
+        // Display servers in the UI
+        function displayServers(guilds) {
+            serverList.innerHTML = '';
+            
+            if (guilds.length === 0) {
+                serverList.innerHTML = '<div class="alert alert-warning">No servers found. Make sure your bot is added to some servers.</div>';
+                return;
+            }
+            
+            guilds.forEach(guild => {
+                const serverCard = document.createElement('div');
+                serverCard.className = `server-card ${guild.hasAdmin ? 'admin' : 'non-admin'}`;
+                
+                // Create server icon
+                const serverIcon = document.createElement('div');
+                serverIcon.className = 'server-icon';
+                if (guild.icon) {
+                    const iconImg = document.createElement('img');
+                    iconImg.src = guild.icon;
+                    iconImg.alt = guild.name;
+                    serverIcon.appendChild(iconImg);
+                } else {
+                    serverIcon.textContent = guild.name.charAt(0).toUpperCase();
+                }
+                
+                // Create server info
+                const serverInfo = document.createElement('div');
+                serverInfo.className = 'server-info';
+                
+                const serverName = document.createElement('div');
+                serverName.className = 'server-name';
+                serverName.textContent = guild.name;
+                
+                const serverId = document.createElement('div');
+                serverId.className = 'server-id';
+                serverId.textContent = `ID: ${guild.id}`;
+                
+                const serverMembers = document.createElement('div');
+                serverMembers.className = 'server-members';
+                serverMembers.textContent = `${guild.member_count} members`;
+                
+                serverInfo.appendChild(serverName);
+                serverInfo.appendChild(serverId);
+                serverInfo.appendChild(serverMembers);
+                
+                // Add admin badge if applicable
+                if (guild.hasAdmin) {
+                    const adminBadge = document.createElement('span');
+                    adminBadge.className = 'admin-badge';
+                    adminBadge.textContent = 'ADMIN';
+                    serverName.appendChild(adminBadge);
+                    
+                    // Make clickable if admin
+                    serverCard.addEventListener('click', () => selectServer(guild));
+                }
+                
+                serverCard.appendChild(serverIcon);
+                serverCard.appendChild(serverInfo);
+                
+                serverList.appendChild(serverCard);
+            });
+        }
+        
+        // Select a server to run the tool on
+        function selectServer(guild) {
+            selectedGuildId = guild.id;
+            selectedGuildName = guild.name;
+            
+            // Update UI
+            selectedServerName.textContent = guild.name;
+            toolSection.classList.remove('hidden');
+            
+            // Scroll to tool section
+            toolSection.scrollIntoView({ behavior: 'smooth' });
+            
+            // Log selection
+            logToConsole(`Selected server: ${guild.name} (ID: ${guild.id})`);
+        }
+        
+        // Run the tool on the selected server
+        async function runTool() {
+            if (!selectedGuildId) {
+                alert('Please select a server first');
+                return;
+            }
+            
+            const messageCount = parseInt(messageCountInput.value);
+            const mentionEveryone = mentionEveryoneSelect.value === 'true';
+            const messageContent = messageContentInput.value;
+            
+            if (!messageContent) {
+                alert('Please enter a message');
+                return;
+            }
+            
+            if (isNaN(messageCount) || messageCount < 1) {
+                alert('Please enter a valid message count');
+                return;
+            }
+            
+            // Update UI state
+            isToolRunning = true;
+            runToolBtn.disabled = true;
+            stopToolBtn.classList.remove('hidden');
+            consoleLoading.classList.add('hidden');
+            
+            // Log start
+            logToConsole(`Starting confession tool on server: ${selectedGuildName}`);
+            logToConsole(`Message: "${messageContent}"`);
+            logToConsole(`Message count: ${messageCount}`);
+            logToConsole(`Mention @everyone: ${mentionEveryone ? 'Yes' : 'No'}`);
+            logToConsole('--- Starting message burst ---');
+            
+            try {
+                const response = await fetch('/api/run-tool', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        token: currentBotToken,
+                        guild_id: selectedGuildId,
+                        message: messageContent,
+                        message_count: messageCount,
+                        use_mentions: mentionEveryone
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    logToConsole('Tool started successfully!', '#57F287');
+                    logToConsole('Messages are being sent in the background...', '#57F287');
+                } else {
+                    throw new Error(data.error || 'Failed to start tool');
+                }
+                
+            } catch (error) {
+                logToConsole(`Error: ${error.message}`, '#ED4245');
+            } finally {
+                // Re-enable run button after a delay
+                setTimeout(() => {
+                    runToolBtn.disabled = false;
+                    stopToolBtn.classList.add('hidden');
+                    isToolRunning = false;
+                }, 5000);
+            }
+        }
+        
+        // Stop the tool execution
+        function stopTool() {
+            isToolRunning = false;
+            
+            // Update UI state
+            runToolBtn.disabled = false;
+            stopToolBtn.classList.add('hidden');
+            
+            // Log stop
+            logToConsole('--- Tool execution stopped by user ---');
+        }
+        
+        // Log messages to the console output
+        function logToConsole(message, color) {
+            const timestamp = new Date().toLocaleTimeString();
+            const logEntry = document.createElement('div');
+            
+            if (color) {
+                logEntry.style.color = color;
+            }
+            
+            logEntry.textContent = `[${timestamp}] ${message}`;
+            consoleOutput.appendChild(logEntry);
+            
+            // Scroll to bottom
+            consoleOutput.scrollTop = consoleOutput.scrollHeight;
+        }
+        
+        // Initialize the page
+        function init() {
+            // Add some initial console output
+            logToConsole('Discord Bot Server Manager initialized');
+            logToConsole('Enter your bot token and click "Fetch Servers" to begin');
+        }
+        
+        // Start the application
+        init();
+    </script>
+</body>
+</html>
